@@ -1,0 +1,7 @@
+pandas
+numpy
+nltk
+torch
+transformers
+scikit-learn
+faker
