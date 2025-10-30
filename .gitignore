@@ -1,0 +1,21 @@
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files
+*.csv
+*.pkl
+*.safetensors
+*.pt
+
+# Results and outputs
+results/
+Output.png

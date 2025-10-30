@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Customer Feedback Analysis System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #667eea;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+        textarea, input[type="file"], button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        #result, #uploadResult {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .positive { background-color: #d4edda; border-left: 4px solid #28a745; }
+        .negative { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+        .neutral { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Intelligent Customer Feedback Analysis System</h1>
+        <p>AI-powered sentiment analysis, summarization, and insights</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>Single Feedback Analysis</h2>
+            <form id="analysisForm">
+                <textarea id="feedback" name="feedback" rows="5" placeholder="Enter customer feedback here..."></textarea>
+                <button type="submit">Analyze Feedback</button>
+            </form>
+            <div id="result"></div>
+        </div>
+
+        <div class="card">
+            <h2>Bulk Feedback Analysis</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" id="file" name="file" accept=".csv">
+                <button type="submit">Upload and Analyze CSV</button>
+            </form>
+            <div id="uploadResult"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Insights Dashboard</h2>
+        <button id="loadInsights">Load Insights</button>
+        <div class="chart-container">
+            <canvas id="sentimentChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+        <div id="insightsResult"></div>
+    </div>
+
+    <footer>
+        <p>Intelligent Customer Feedback Analysis System &copy; 2025</p>
+    </footer>
+
+    <script>
+        // Handle single feedback analysis
+        document.getElementById('analysisForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const feedback = document.getElementById('feedback').value;
+            if (!feedback.trim()) {
+                alert('Please enter feedback text');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing...</p></div>';
+            resultDiv.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('feedback', feedback);
+            
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.innerHTML = `<div class="negative">Error: ${data.error}</div>`;
+                } else {
+                    let sentimentClass = data.sentiment;
+                    resultDiv.innerHTML = `
+                        <div class="${sentimentClass}">
+                            <h3>Sentiment: ${data.sentiment.toUpperCase()}</h3>
+                            <p>Confidence: ${(data.confidence * 100).toFixed(1)}%</p>
+                            <p><strong>Summary:</strong> ${data.summary}</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<div class="negative">Error: ${error.message}</div>`;
+            });
+        });
+
+        // Handle CSV upload
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('file');
+            if (!fileInput.files.length) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            const uploadResult = document.getElementById('uploadResult');
+            uploadResult.innerHTML = '<div class="loading"><div class="spinner"></div><p>Processing file...</p></div>';
+            uploadResult.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    uploadResult.innerHTML = `<div class="negative">Error: ${data.error}</div>`;
+                } else {
+                    let html = '<h3>Analysis Results:</h3><div style="max-height: 300px; overflow-y: auto;">';
+                    data.slice(0, 10).forEach((item, index) => {
+                        html += `
+                            <div class="${item.sentiment}" style="margin-bottom: 10px;">
+                                <strong>Feedback ${index + 1}:</strong> ${item.sentiment.toUpperCase()}<br>
+                                <em>${item.summary}</em>
+                            </div>
+                        `;
+                    });
+                    if (data.length > 10) {
+                        html += `<p>... and ${data.length - 10} more feedbacks</p>`;
+                    }
+                    html += '</div>';
+                    uploadResult.innerHTML = html;
+                }
+            })
+            .catch(error => {
+                uploadResult.innerHTML = `<div class="negative">Error: ${error.message}</div>`;
+            });
+        });
+
+        // Handle insights loading
+        document.getElementById('loadInsights').addEventListener('click', function() {
+            const insightsResult = document.getElementById('insightsResult');
+            insightsResult.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading insights...</p></div>';
+            
+            fetch('/insights')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    insightsResult.innerHTML = `<div class="negative">Error: ${data.error}</div>`;
+                } else {
+                    // Display sentiment distribution
+                    displaySentimentChart(data.sentiment_distribution);
+                    
+                    // Display trend data
+                    displayTrendChart(data.trend_data);
+                    
+                    // Display common issues
+                    let issuesHtml = '<h3>Common Issues:</h3><ul>';
+                    for (const [word, count] of Object.entries(data.common_issues)) {
+                        issuesHtml += `<li>${word}: ${count} occurrences</li>`;
+                    }
+                    issuesHtml += '</ul>';
+                    insightsResult.innerHTML = issuesHtml;
+                }
+            })
+            .catch(error => {
+                insightsResult.innerHTML = `<div class="negative">Error: ${error.message}</div>`;
+            });
+        });
+
+        // Chart functions
+        let sentimentChart, trendChart;
+
+        function displaySentimentChart(data) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+            
+            sentimentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Feedback Count',
+                        data: Object.values(data),
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.7)', // Green for positive
+                            'rgba(220, 53, 69, 0.7)',  // Red for negative
+                            'rgba(255, 193, 7, 0.7)'   // Yellow for neutral
+                        ],
+                        borderColor: [
+                            'rgba(40, 167, 69, 1)',
+                            'rgba(220, 53, 69, 1)',
+                            'rgba(255, 193, 7, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTrendChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (trendChart) {
+                trendChart.destroy();
+            }
+            
+            // Prepare data for chart
+            const months = data.map(item => item.month);
+            const positive = data.map(item => item.positive || 0);
+            const negative = data.map(item => item.negative || 0);
+            const neutral = data.map(item => item.neutral || 0);
+            
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Positive',
+                            data: positive,
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: false
+                        },
+                        {
+                            label: 'Negative',
+                            data: negative,
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: false
+                        },
+                        {
+                            label: 'Neutral',
+                            data: neutral,
+                            borderColor: 'rgba(255, 193, 7, 1)',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
